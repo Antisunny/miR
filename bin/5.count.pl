@@ -1,18 +1,18 @@
 #!/usr/bin/perl
 
 use Getopt::Long;
-use Pod::Usage;
+use Pod::Usage qw/pod2usage/;
 
 GetOptions(
 	'sam|m=s' => \my $samFile,
 	'table|t=s' => \my $tblFile,
 	'outdir|o=s' => \my $outDir,
 	'prefix|p=s' => \my $prefix,
-	'htlp|h'  => \my $help
+	'help|h'  => \my $help
 ) or pod2usage(-verbose => 1);
 
-pod2usage(-verbose => 1) if $help;
-$cate  = $samFile =~ s#[^/]+/##gr =~ s/$prefix\.//r =~ s/\.std\.sam//r;
+pod2usage(-verbose => 1) if $help or @ARGV == 0;
+$cate  = $samFile =~ s|[^/]+/||gr =~ s/$prefix\.//r =~ s/\.std\.sam//r;
 $out_file = "$outDir/$prefix-$cate.count";
 die "\e[01;31moutpout dir is required\e[00m\n" unless $outDir;
 die "\e[01;31mprefix is required\e[00m\n" unless $prefix;
@@ -33,73 +33,15 @@ close SAM;
 
 while (<IN>){
 	s/\r?\n|\r//;
-    #&miRNA_coverage((split /\t/)[0,2]);
-    &hairpin_dist((split/\t/)[0,2,3],\@SAM);
+  &dist((split/\t/)[0,2,3],\@SAM);
 }
 
-sub miRNA_coverage{
-	my($miRNA,$start) = @_;
-	my %total = ();
-	print STDERR "$miRNA\n";
-    # $miRNA like `ath-miR447a.2-3p`
-	print "$miRNA\n";
-	my $hairpin = join '-',(split(/-|\./,$miRNA))[0,1] =~s/mi/MI/r;
-	seek(SAM,0,SEEK_SET);
-	while(<SAM>){
-        next if /^@/;
-		if(/$hairpin/){
-			my @flds = split /\t/;
-			my $seq =(split /-+/, $flds[0])[0];
-			if(abs($flds[3]-$start) <= 2 ){
-                # allow 2bp shift 
-				for(my $i = $flds[3]; $i <= $flds[3]+length($seq)-1; $i++){ ##total coverage
-					if ($i >= $start){
-                        $total{$i}++;
-                    }
-				}
-			}
-		}
-	}			
-	close SAM;
-    
-    if (! %total){
-        print "$miRNA empty %total\n";
-        return 1;
-    }
-    print OUT "position\t";
-	print OUT "$_\t"  for (sort {$a<=>$b} (keys %total));
-	print OUT "\n$miRNA\t";
-	print OUT "$total{$_}\t" for (sort {$a<=>$b} (keys %total));
-	print OUT "\n";
-}
-sub hairpin_dist{
+sub dist{
     my ($miRNA,$start,$length,$lib) = @_;
     my $total=0;
     my $trimmedOnly=0;
     my $intack=0;
 	print "$miRNA ...\n";
-    #format ath-MIR447a
-	# seek(SAM,0,SEEK_SET);
-    # while(<SAM>){
-    #     s/\r?\n|\r//;
-    #     next if /^@/;
-    #     if (/$miRNA/i){
-    #         @flds = split/\t/;
-    #         if(abs($flds[3]-$start) <= 2){
-    #             @heads = split /-+/, $flds[0];
-    #             # format Sample-SRR505135-TGACAGAAGAGAG--0 
-    #             if(length($heads[2]) < $length){
-    #                 $trimmedOnly++;
-    #                 print STDERR "*";
-    #             }
-    #             if(length($heads[2]) == $length){
-    #                 $intack++;
-    #                 print STDERR "#";
-    #             }
-    #         }
-    #         $total++;
-    #     }
-    # }
     for (@$lib){
         if ($$_[1] =~ m#$miRNA#i){
             if (abs($$_[2]-$start) <= 2) {
@@ -121,3 +63,23 @@ sub hairpin_dist{
     print OUT "$miRNA\t$total\t$trimmedOnly\t$intack\n";
 }
 
+__END__
+=head1 SYNOPSIS
+
+	perl 5.count.pl [options]
+
+	Options:
+
+	--sam or -s      specifies the 4.remapping SAM file of hairpin or mature(not both).
+
+	--table or -t    specifies the 00.info_table tbl file hairpin or mature accordingly.
+
+	--outdir or -o   specifies the output dir, which will includes all the output
+                      files of this step
+
+	--prefix or -p   specifies the unique name for this inout file. This will be
+								   used as the prefix for all output files
+
+	--help or -h     will print this help info page.
+
+=cut

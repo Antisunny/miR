@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 
-use feature ":5.18";
+use feature ":5.16";
 use Getopt::Long;
-use Pod::Usage;
+use Pod::Usage qw/pod2usage/;
 no warnings "all";
 
 GetOptions(
@@ -12,6 +12,7 @@ GetOptions(
     "help|h"     => \my $help
 ) or pod2usage(-verbose=>1);
 
+pod2usage(-verbose=>1) if $help or @ARGV == 0;
 $sam_file  = $ARGV[0];
 die "discard file is required\n" unless $discard_file;
 die "prefix|outdir is required\n" unless $prefix && $outDir;
@@ -32,26 +33,26 @@ while(<DIF>){
     @field = split/\t/;
     given($field[0]){
         when('Chr1'){
-            push @chr1, [$field[3]-30,$field[4]+30];    
-        }   
+            push @chr1, [$field[3]-30,$field[4]+30];
+        }
         when('Chr2'){
-            push @chr2, [$field[3]-30,$field[4]+30];    
-        }   
+            push @chr2, [$field[3]-30,$field[4]+30];
+        }
         when('Chr3'){
-            push @chr3, [$field[3]-30,$field[4]+30];    
-        }   
+            push @chr3, [$field[3]-30,$field[4]+30];
+        }
         when('Chr4'){
-            push @chr4, [$field[3]-30,$field[4]+30];    
-        }   
+            push @chr4, [$field[3]-30,$field[4]+30];
+        }
         when('Chr5'){
-            push @chr5, [$field[3]-30,$field[4]+30];    
-        }   
+            push @chr5, [$field[3]-30,$field[4]+30];
+        }
         when('ChrC'){
-            push @chrc, [$field[3]-30,$field[4]+30];    
-        }   
+            push @chrc, [$field[3]-30,$field[4]+30];
+        }
         when('ChrM'){
-            push @chrm, [$field[3]-30,$field[4]+30];    
-        }   
+            push @chrm, [$field[3]-30,$field[4]+30];
+        }
     }
 }
 
@@ -133,3 +134,29 @@ while(<SAM>){
 	}
 }
 
+=head1 SYNOPSIS
+
+  perl 2.discard-reads-of-trsno.pl [options] sam_file
+
+  Options:
+
+  --discard_file or -d  specifies the file in GFF3 format containing all the
+                        sites to be discarded.
+                        By default, the file has been give, named tair-t-r-sn-sno.txt
+                        ,which is extraced from TAIR10 Annotation file for A.th.
+
+  --prefix or -p        specifies the unique name for this inout file. This will be
+                        used as the prefix for all output files, ex.
+                        ${prefix}_removed.dat contains info of reads matching sites
+                        specified in $discard_file, ${prefix}_kept.dat contains the
+                        reads kept for later use.
+
+  --outdir or -o        specifies the output dir, which will includes all the output
+                        files of this step
+
+  --help or -h          will print this help info page.
+
+  sam_file              SAM file generated from mapping to TAIR1O genome using bowtie2
+                        . First index the Genome using bowtie2-build, and map
+                        before this step.
+=cut
