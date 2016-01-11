@@ -77,7 +77,7 @@ __END__
 	--outdir or -o   specifies the output dir, which will includes all the output
                       files of this step
 
-	--prefix or -p   specifies the unique name for this inout file. This will be
+	--prefix or -p   specifies the unique name for this input file. This will be
 								   used as the prefix for all output files
 
 	--help or -h     will print this help info page.

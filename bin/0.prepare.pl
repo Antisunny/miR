@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use Getopt::Long;
-use Pod::Usage;
+use Getopt::Long qw/GetOptions/;
 
 GetOptions(
 "mature|m=s" => \my $mature_in,
@@ -9,7 +9,8 @@ GetOptions(
 "outdir|o=s" => \my $out_dir,
 "help" => \my $help
 ) or die pod2usage(-verbose=>1);
-# pre-pro
+pod2usage( -verbose =>1) if $help or @ARGV == 0;
+
 die "\e[01;31moutpout dir is required\e[00m\n" unless $out_dir;
 $mature_out = $out_dir."/athMature.fa";
 $hairpin_out = "$out_dir/athHairpin.txt";
@@ -33,7 +34,7 @@ close MIN;
 close MOUT;
 
 
-# get athHairpin.txt from hairpin.fa 
+# get athHairpin.txt from hairpin.fa
 # make hairpin.fa in FASTA format seq in one line, not multiline as in fasta format
 open HIN,       $hairpin_in  or die "\e[01;31mError in reading $hairpin_in\n$!\e[00m\n";
 open HOUT, '>', $hairpin_out or die "\e[01;31mError writing to $hairpin_out\n$!\e[00m\n";
@@ -61,14 +62,14 @@ while (<HIN>){
 close HIN;
 close HOUT;
 
-=head1
-will get
-athMature.fa # only of a.th.
-athHairpin.fa # only of a.th.
-athHairpin.txt # only of a.th. in one-line
-from
-mature.fa  # a fasta file containing all mature miRNAs of all species
-hairpin.fa # a fasta format file containing all miRNAs= hairpin of all species
-downloaded from
-miRbase.org
-=end
+=head1 SYNOPSIS
+  will get
+  athMature.fa # only of a.th.
+  athHairpin.fa # only of a.th.
+  athHairpin.txt # only of a.th. in one-line
+  from
+  mature.fa  # a fasta file containing all mature miRNAs of all species
+  hairpin.fa # a fasta format file containing all miRNAs= hairpin of all species
+  downloaded from
+  miRbase.org
+=cut

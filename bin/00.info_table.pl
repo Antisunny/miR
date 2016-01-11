@@ -50,7 +50,7 @@ while(<MUG>){
     seek(HPF,0,SEEK_SET);
     while($rawh = <HPF>){
         chomp($rawh);
-        $name = $attrs{Name} =~ s/mi/MI/r; #=~ s/-[0-9]p//r =~ s/\.[0-9]$//r;
+        $name = $attrs{Name} =~ s/mi/MI/r;
         if ($rawh =~ /^>/ && $rawh =~ /$name/){
             chomp($ref = <HPF>);
             $start_pos = index $ref, $seq_fas; # 1-based
@@ -66,20 +66,10 @@ while(<MUG>){
     }
     next if $start_pos == -1;
     $start_pos -=1; # covert to 0-based
-    $name = $attrs{Name} =~ s/mi/MI/r;#=~ s/-[0-9]p//r =~ s/\.[0-9]$//r;
+    $name = $attrs{Name} =~ s/mi/MI/r;
     print OUT  "$name\t$seq_fas\t$start_pos\t".($flds[4]-$flds[3]+1)."\n";
     print OUT2 "$name\t$mature_shift2\t0\t".(length($mature_shift2))."\n";
 }
-# for all-mature-start-length.tbl
-# seek(MUF,0,SEEK_SET);
-# while(<MUF>){
-#     s/\r?\n|\r//;
-# 	my $raw = substr $_, 1 if /^>/;
-# 	my $name = (split /[ ]/,$raw)[0];
-#     chomp(my $seq=<MUF>);
-#     print OUT2 "$name\t$seq\t0\t".(length($seq))."\n";
-# }
-# close MUF;
 
 =head1 DESCRIPTION
  will get
