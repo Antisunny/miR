@@ -11,7 +11,7 @@ GetOptions(
 ) or pod2usage(-verbose => 1);
 
 #pre
-pod2usage(-verbose => 1) if $help;
+pod2usage( -verbose =>1) if $help or @ARGV == 0;
 die "\e[01;31moutpout dir is required\e[00m\n" unless $out_dir;
 $out_file1 = "$out_dir/all-hairpin-start-length.tbl";
 $out_file2 = "$out_dir/all-mature-start-length.tbl";
@@ -71,7 +71,7 @@ while(<MUG>){
     print OUT2 "$name\t$mature_shift2\t0\t".(length($mature_shift2))."\n";
 }
 
-=head1 DESCRIPTION
+=head1 SYNOPSIS
  will get
   all-hairpin-start-length.tbl
   all-mature-start-length.tbl

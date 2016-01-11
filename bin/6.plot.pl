@@ -6,5 +6,4 @@ while (<IN>) {
     @fd = split/\t/ if /^ath/;
     $a = $fd{0} =~ s/-[0-9]p$//r;
     $TBL{$a} = [$fd[1],$fd[2],$fd[3]] if ! $TBL{$a};
-    if
 }

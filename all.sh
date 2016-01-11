@@ -29,8 +29,10 @@ domiR(){
 	perl $miR/bin/5.count.pl -o $mark/5 -m ${mark}/4/${mark}.mature.std.sam -t $miR/all-mature-start-length.tbl3 -p $mark
 	echo "["`date +%m/%d/%Y-%H:%M:%S`"] Done with step 5 counting";
 }
-
-domiR ilp1_1
-domiR ilp1_2
-domiR Col-0_1
-domiR Col-0_2
+domiRs(){
+	for pf in $@;do
+		echo "Processing $pf"
+		domiR $pf
+	done
+}
+domiRs ilp1_1 ilp1_2 Col-0_1 Col-0_2
