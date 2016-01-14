@@ -11,7 +11,7 @@ GetOptions(
 ) or pod2usage(-verbose => 1);
 
 #pre
-pod2usage( -verbose =>1) if $help or @ARGV == 0;
+pod2usage( -verbose =>1) if $help;
 die "\e[01;31moutpout dir is required\e[00m\n" unless $out_dir;
 $out_file1 = "$out_dir/all-hairpin-start-length.tbl";
 $out_file2 = "$out_dir/all-mature-start-length.tbl";

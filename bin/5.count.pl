@@ -11,7 +11,7 @@ GetOptions(
 	'help|h'  => \my $help
 ) or pod2usage(-verbose => 1);
 
-pod2usage(-verbose => 1) if $help or @ARGV == 0;
+pod2usage(-verbose => 1) if $help;
 $cate  = $samFile =~ s|[^/]+/||gr =~ s/$prefix\.//r =~ s/\.std\.sam//r;
 $out_file = "$outDir/$prefix-$cate.count";
 die "\e[01;31moutpout dir is required\e[00m\n" unless $outDir;

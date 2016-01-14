@@ -24,8 +24,8 @@ open FMT,">",$fmtFile or die "Error $fmtFile : $!\n";
 while(<IN>){
     $seq = <IN>;
     $inf=[split/-/]->[0];
-    $seq =~ s/T/U/g;
-    print FMT ">sample-$inf-$seq--0\n$seq";
+    $seq = $seq =~ s/T/U/gr =~ s/\r?\n|\r//r;
+    print FMT ">sample-$inf-$seq--0\n$seq\n";
 }
 close(IN);
 close(FMT);

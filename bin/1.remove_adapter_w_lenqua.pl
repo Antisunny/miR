@@ -48,6 +48,8 @@ my %length_distribution_A=();
 my %length_distribution_G=();
 my %length_distribution_C=();
 my %length_distribution_T=();
+my $too_long=0;
+my $too_short=0;
 
 while(my $raw1=<IN>) {
 	chomp(my $raw=<IN>);
@@ -55,7 +57,7 @@ while(my $raw1=<IN>) {
 	chomp(my $raw4=<IN>);
 	chomp($raw1);
 	if($raw=~/$adapter/g) {
-		my $match_position=pos($raw);
+		my $match_position=$+[0];
 		my $mirna='';
 		my $quality='';
 		my $score='';
@@ -81,6 +83,10 @@ while(my $raw1=<IN>) {
 					print OUT ">${prefix}-$clean_reads_num-score:$score\n$mirna\n" if $mirna !~ /N/i;
 					$clean_reads_num++;
 				}
+			}elsif($readlen > $range[1]){
+				$too_long+=1;
+			}elsif($readlen < $range[0]){
+				$too_short+=1;
 			}
 		}
 	}
@@ -89,7 +95,6 @@ while(my $raw1=<IN>) {
 		$cc += 1;
 		print LOG "*";
 		if ($cc%80 == 0) {
-			print LOG "\t$all_reads_num\n";
 			print "$all_reads_num\n";
 		}
 	}
@@ -98,7 +103,10 @@ close(IN);
 close(OUT);
 
 # LOG summary of the reads
-print LOG "\n".("*" x 40)."\n$name\ntotal: $all_reads_num\n$min_length-$max_length: $subseq_num\n and score>=$min_quality: $clean_reads_num\n";
+$too_long = $all_reads_num-$subseq_num-$too_short;
+$too_long_ratio  = sprintf("%.2f%%", $too_long/$all_reads_num);
+$too_short_ratio = sprintf("%.2f%%", $too_short/$all_reads_num);
+print LOG "".("*" x 40)."\n$name\n>total\t$all_reads_num\n>$range[0]-$range[1]\t$subseq_num\n>+score>=$min_quality\t$clean_reads_num\n>too long\t$too_long ($too_long_ratio)\n>to short\t$too_short($too_short_ratio)\n";
 print LOG "mean phred score distribution\n";
 my @ss = keys %PhredScore;
 for (sort {$a cmp $b} @ss) {
@@ -126,7 +134,7 @@ sub save_recoreds{
   $record =~ s/\t$/\n/;
 	print DBT $record;
 }
-&save_recoreds('all',%length_distribution);
+#&save_recoreds('all',%length_distribution);
 &save_recoreds('A',  %length_distribution_A);
 &save_recoreds('T',  %length_distribution_T);
 &save_recoreds('C',  %length_distribution_C);

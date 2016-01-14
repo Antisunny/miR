@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use Getopt::Long;
-use Getopt::Long qw/GetOptions/;
+use Pod::Usage qw/pod2usage/;
 
 GetOptions(
 "mature|m=s" => \my $mature_in,
@@ -9,7 +9,7 @@ GetOptions(
 "outdir|o=s" => \my $out_dir,
 "help" => \my $help
 ) or die pod2usage(-verbose=>1);
-pod2usage( -verbose =>1) if $help or @ARGV == 0;
+pod2usage( -verbose =>1) if $help;
 
 die "\e[01;31moutpout dir is required\e[00m\n" unless $out_dir;
 $mature_out = $out_dir."/athMature.fa";
@@ -24,10 +24,10 @@ $species = "Arabidopsis thaliana";
 $pattern = qr/^>[A-Za-z0-9\- \.]+$species/;
 while (<MIN>) {
     if(/$pattern/){
-		$header = $_ =~ s/miR/MIR/r;
+		$header = $_ =~ s/miR/MIR/r =~ s/\r?\n|\r//r;
         print MOUT $header;
         my $seq  = <MIN>;
-        print MOUT $seq;
+        print MOUT &reverse_complement($seq)."\n";
     }
 }
 close MIN;
@@ -44,8 +44,8 @@ $fas_fa = '';
 $hit =1;
 while (<HIN>){
    if (/$pattern/ ){
-       print HOUT "$fas_seq\n" if $fas_seq;
-	   print HOFA $fas_fa if $fas_fa;
+       print HOUT "".&reverse_complement($fas_seq)."\n" if $fas_seq;
+	   print HOFA &break_fa(&reverse_complement($fas_seq)) if $fas_fa;
        print HOUT $_;
 	   print HOFA $_;
        $hit = 0;
@@ -62,6 +62,23 @@ while (<HIN>){
 close HIN;
 close HOUT;
 
+
+sub reverse_complement {
+    my $dna = shift;
+    my $revcomp = reverse($dna);
+	$revcomp =~ tr/ACGTU/TGCA/g;
+	return $revcomp;
+}
+sub break_fa{
+    my $dna = shift;
+	my $sta = 0;
+	my $len = 60; 
+	my $fa ='';
+	while($sta < length($dna)){
+	      $fa .= substr($dna,$sta,$len)."\n";
+	      $sta +=80;
+	}   
+	return $fa;                                                                                                                                   }
 =head1 SYNOPSIS
   will get
   athMature.fa # only of a.th.

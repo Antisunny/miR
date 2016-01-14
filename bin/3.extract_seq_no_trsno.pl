@@ -45,7 +45,7 @@ open SEQOUT, ">", $seqOut  or die "Error $seqOut: $!\n";
 while(<SEQIN>){
     s/\r?\n|\r//;s/^>//;
     $raw_seq = <SEQIN>;
-    print SEQOUT "$_\n$raw_seq" unless exists($names{$_});
+    print SEQOUT ">$_\n$raw_seq" unless exists($names{$_});
 }
 close SEQIN;
 close SEQOUT;
