@@ -6,13 +6,13 @@ use Pod::Usage qw/pod2usage/;
 no warnings "all";
 
 GetOptions(
-    'adapter|a=s' => \my $adapter,
-    'min-length|mil=i' => \my $min_length,
-    'max-length|mal=i' => \my $max_length,
-    'min-quality|maq=i' => \my $max_quality,
-    'outdir|o=s'  => \my $outdir,
-    'prefix|p=s'  => \my $prefix,
-    'help|h'        => \my $help
+  'adapter|a=s' => \my $adapter,
+  'min-length|mil=i' => \my $min_length,
+  'max-length|mal=i' => \my $max_length,
+  'min-quality|maq=i' => \my $max_quality,
+  'outdir|o=s'  => \my $outdir,
+  'prefix|p=s'  => \my $prefix,
+  'help|h'        => \my $help
  ) or pod2usage(-verbose => 2);
 
 pod2usage( -verbose =>1) if $help or @ARGV == 0;
@@ -22,11 +22,14 @@ if ($ARGV[0] =~ /\.(gz|bz2)$/){
   die "compressed fastq is not supported. uncompress it."
 }
 unless($prefix){
+  # get basename
 	$prefix = [split /\//, $infile]->[-1];
+  # remove extension and the left as $prefix
 	$prefix =~ m/([A-Za-z0-9_\.-]+)\.(fastq|fq)$/;
 	$prefix = $1;
 }
 
+# add file handler
 $outfile = $prefix."_armd.fa";
 open IN,$infile or die "Error in reading $infile\n";
 open OUT,">>","$outdir/$outfile" or die "$!\nError in writing results to $outdir/$outfile\n";
@@ -34,120 +37,122 @@ open IN,  '<',   $infile                     or die "Error $infile\n";
 open OUT, '>>', "$outdir/$outfile"           or die "Error write results to $outfile\n";
 open LOG, '>>', "$outdir/${prefix}_run.log"  or die "$!\n";
 open DBT ,'>>', "$outdir/${prefix}_dist.txt" or die "$!\n";
+
+# global variables
 my $cc = 0;
-my $all_reads_num=0;
-my $subseq_num=0;
-my $clean_reads_num=0;
-my %PhredScore=();
-my @range;
-push @range, $min_length ? $min_length : 17;
-push @range, $max_length ? $max_length : 30;
-my $min_quality = $min_quality ? $min_quality : 20;
-my %length_distribution=();
-my %length_distribution_A=();
-my %length_distribution_G=();
-my %length_distribution_C=();
-my %length_distribution_T=();
+my $all_reads_num=0;    # all reads of the fastq file
+my $subseq_num=0;       # reads between $min_length and $max_length
+my $clean_reads_num=0;  # reads in length range and quality > 20
+my %dist_qlt=();      # key as the mean quality of a read, value as the count of this quality
+my @range;              # the reads longer than $min_length or shorter than $max_length kept
+push @range, $min_length // 17;
+push @range, $max_length // 30;
+my $adapter_length = length($adapter);
+my %kept_dist=();
+my %dist_A=();
+my %dist_G=();
+my %dist_C=();
+my %dist_T=();
 my $too_long=0;
 my $too_short=0;
+my $no_adapter=0;
 
-while(my $raw1=<IN>) {
-	chomp(my $raw=<IN>);
-	chomp(my $raw3=<IN>);
-	chomp(my $raw4=<IN>);
-	chomp($raw1);
-	if($raw=~/$adapter/g) {
+while(<IN>) {
+  # remove the new line character
+	my $sqs=<IN> =~ s/\r?\n|\r//r;
+	my $pls=<IN>;
+	my $qlt=<IN> =~ s/\r?\n|\r//r;
+	if($sqs=~/$adapter/g) {
 		my $match_position=$+[0];
-		my $mirna='';
+		my $subseq='';
 		my $quality='';
 		my $score='';
-		if($match_position>length($adapter)) {
-			$mirna = substr $raw, 0, $match_position-length($adapter);
-			$quality = substr $raw4, 0, $match_position-length($adapter);
-			$score = &MeanPhredScore($quality);
-			my $readslen = length($mirna);
+    # make sure the seq left is longer than 0bp
+		if($match_position > $adapter_length) {
+			$subseq = substr $sqs, 0, $match_position-$adapter_length;
+			my $readslen = length($subseq);
 			if( $readslen >= $range[0] && $readslen <= $range[1]){
-				$subseq_num++;
-				$PhredScore{$score}++;
+        # get mean quality of the reads
+        $score = &mean_qlt(substr $qlt, 0, $match_position - $adapter_length);
+				# $subseq_num++;
+				$dist_qlt{$score}++;
 				if($score >= $min_quality){
-					$length_distribution{$readslen}++;
-					next if $mirna =~ /N/i;
-					my $startswith = substr $mirna,0,1;
+					$kept_dist{$readslen}++;
+					next if $subseq =~ /N/i;
+					my $startswith = substr $subseq,0,1;
 					given ($startswith) {
-						when (/[Aa]/) { $length_distribution_A{$readslen}++; }
-						when (/[Gg]/) { $length_distribution_G{$readslen}++; }
-						when (/[Cc]/) { $length_distribution_C{$readslen}++; }
-						when (/[Tt]/) { $length_distribution_T{$readslen}++; }
+						when (/[Aa]/) { $dist_A{$readslen}++; }
+						when (/[Gg]/) { $dist_G{$readslen}++; }
+						when (/[Cc]/) { $dist_C{$readslen}++; }
+						when (/[Tt]/) { $dist_T{$readslen}++; }
 						default {next}
 					}
-					print OUT ">${prefix}-$clean_reads_num-score:$score\n$mirna\n" if $mirna !~ /N/i;
+					print OUT ">${prefix}-$clean_reads_num-score:$score\n$subseq\n";
 					$clean_reads_num++;
 				}
-			}elsif($readlen > $range[1]){
-				$too_long+=1;
-			}elsif($readlen < $range[0]){
-				$too_short+=1;
-			}
+			}elsif($readslen < $range[0]){
+        $too_long++
+      }elsif($readslen > $range[1]){
+        $too_short++
+      }
 		}
-	}
+	}else{
+    $no_adapter++;
+    say STDERR "no adapter in the read";
+  }
 	$all_reads_num++;
-	if($all_reads_num%10000 == 0){
-		$cc += 1;
-		print LOG "*";
-		if ($cc%80 == 0) {
-			print "$all_reads_num\n";
-		}
-	}
 }
 close(IN);
 close(OUT);
 
 # LOG summary of the reads
-$too_long = $all_reads_num-$subseq_num-$too_short;
+#$too_long = $all_reads_num - $subseq_num - $too_short;
+$clean_ratio     = sprintf("%.2f%%", $clean_reads_num/$all_reads_num);
 $too_long_ratio  = sprintf("%.2f%%", $too_long/$all_reads_num);
 $too_short_ratio = sprintf("%.2f%%", $too_short/$all_reads_num);
-print LOG "".("*" x 40)."\n$name\n>total\t$all_reads_num\n>$range[0]-$range[1]\t$subseq_num\n>+score>=$min_quality\t$clean_reads_num\n>too long\t$too_long ($too_long_ratio)\n>to short\t$too_short($too_short_ratio)\n";
+$no_adapter_ratio= sprintf("%.2f%%", $no_adapter_ratio/$all_reads_num);
+print LOG "sample name\t$name\ntotal reads\t$all_reads_num\nkept reads([$min_length,$max_length] and > $min_quality)\t$clean_reads_num\ntoo long\t$too_long ($too_long_ratio)\ntoo short\t$too_short($too_short_ratio)\n";
 print LOG "mean phred score distribution\n";
-my @ss = keys %PhredScore;
-for (sort {$a cmp $b} @ss) {
-	print LOG "$_\t$PhredScore{$_}\n";
-}
-close(LOG);
-my $calculated_max_length = &max(keys %length_distribution);
-my $calculated_min_length = &min(keys %length_distribution);
-$min_length = $range[0] > $calculated_min_length ? $range[0] : $calculated_min_length;
-$max_length = $range[1] > $calculated_max_length ? $calculated_max_length : $range[1];
+print LOG &tablulate(\%dist_qlt);
+my $clt_max_length = &max(keys %kept_dist);
+my $clt_min_length = &min(keys %kept_dist);
+$min_length = $range[0] > $clt_min_length ? $range[0] : $clt_min_length;
+$max_length = $range[1] > $clt_max_length ? $clt_max_length : $range[1];
 
 # DBT save all the count into a tablular
-my $title = "$prefix\t";
-for ($min_length..$max_length){
-  $title .= $_."\t";
-}
-$title =~ s/\t$/\n/;
-print DBT $title;
-sub save_recoreds{
-	my ($mark,%a) = @_;
-	my $record = "";
-	foreach ($min_length..$max_length){
-		$record .= $a{$_}."\t";
-	}
-  $record =~ s/\t$/\n/;
-	print DBT $record;
-}
-#&save_recoreds('all',%length_distribution);
-&save_recoreds('A',  %length_distribution_A);
-&save_recoreds('T',  %length_distribution_T);
-&save_recoreds('C',  %length_distribution_C);
-&save_recoreds('G',  %length_distribution_G);
+print DBT &tablulate(\%kept_dist,1);
+print DBT &tablulate(\%dist_A,0);
+print DBT &tablulate(\%dist_T,0);
+print DBT &tablulate(\%dist_C,0);
+print DBT &tablulate(\%dist_G,0);
+# my $title = "$prefix\t";
+# $title .= "$_\t" for ($min_length..$max_length);
+# $title =~ s/\t$/\n/;
+# print DBT $title;
+#
+# sub save_recoreds{
+# 	my ($mark,%a) = @_;
+# 	my $record = "";
+# 	foreach ($min_length..$max_length){
+# 		$record .= $a{$_}."\t";
+# 	}
+#   $record =~ s/\t$/\n/;
+# 	print DBT $record;
+# }
+# #&save_recoreds('all',%kept_dist);
+# &save_recoreds('A',  %dist_A);
+# &save_recoreds('T',  %dist_T);
+# &save_recoreds('C',  %dist_C);
+# &save_recoreds('G',  %dist_G);
 close DBT;
 
-sub MeanPhredScore{
+sub mean_qlt{
 	my @inf = split//, shift;
 	my $score=0;
 	for(my $i=0;$i<scalar(@inf);$i++){
-		$score += ord($inf[$i]);
+		$score += ord($inf[$i])-33;
 	}
-	int($score/length(@inf)+0.5);
+	int($score/scalar(@inf)+0.5);
 }
 sub max{
 	my $max = shift;
@@ -158,6 +163,17 @@ sub min{
     my $min = shift;
     for (@_) {$min = $_ if ($_ < $min)}
     $min
+}
+sub tablulate(){
+  # hash is_header_print
+  $in = shift;
+  $is_header = shift // 1;
+  die "a hash type required" if HASH == ref %$in;
+  @head_fields = sort {$a cmp $b} keys %$in;
+  $header = join "\t", @head_fields;
+  $value .= "$_\t" for (@head_fields);
+  $value =~ s/\t$//;
+  return $is_header ? "$header\n$value\n" : "$value\n";
 }
 __END__
 =head1 SYNOPSIS
